@@ -1,0 +1,21 @@
+[package]
+name    = "server"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "server"
+path = "src/main.rs"
+
+[dependencies]
+common   = { path = "../common" }
+tokio    = { workspace = true }
+serde    = { workspace = true }
+bincode  = { workspace = true }
+chrono   = { workspace = true }
+
+rusqlite = { version = "0.31", features = ["bundled"] }
+bcrypt   = "0.15"
+sysinfo  = "0.30"
+log      = "0.4"
+env_logger = "0.11"
