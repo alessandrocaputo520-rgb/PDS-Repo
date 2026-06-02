@@ -1,0 +1,33 @@
+PDS-Repo/
+├── Cargo.toml              (workspace root)
+├── common/                 (libreria condivisa)
+│   ├── Cargo.toml
+│   └── src/
+│       ├── lib.rs
+│       ├── protocol.rs     (tipi messaggi, serializzazione bincode)
+│       ├── models.rs       (User, Position, VehicleState, Message)
+│       └── geo.rs          (calcolo distanza Haversine, velocità)
+├── server/
+│   ├── Cargo.toml
+│   └── src/
+│       ├── main.rs
+│       ├── network.rs      (TCP listener, gestione connessioni async)
+│       ├── auth.rs         (registrazione, login, hash password)
+│       ├── tracker.rs      (aggiornamento posizioni, macchina a stati)
+│       ├── analytics.rs    (interrogazioni storiche: tragitto, vel. media, pause)
+│       ├── messaging.rs    (broadcast / direct message)
+│       ├── storage.rs      (SQLite: utenti, posizioni, messaggi)
+│       └── logger.rs       (file di log CPU ogni 2 minuti)
+└── client/
+    ├── Cargo.toml
+    └── src/
+        ├── main.rs
+        ├── network.rs      (connessione TCP al server)
+        ├── auth.rs         (registrazione/login interattivo)
+        ├── emulator/
+        │   ├── mod.rs
+        │   ├── file.rs     (lettura da CSV, es. dataset Torino→Asti)
+        │   ├── route.rs    (A→B interpolato con pause)
+        │   ├── manual.rs   (input manuale coordinate)
+        │   └── random.rs   (generatore pseudo-casuale)
+        └── messaging.rs    (invio/ricezione messaggi)

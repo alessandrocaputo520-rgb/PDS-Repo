@@ -1,0 +1,5 @@
+/target/
+fleet.db
+server_cpu.log
+*.log
+Cargo.lock
