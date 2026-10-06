@@ -1,21 +1,12 @@
-//! Campiona il tempo CPU del processo ogni 120 secondi (Linux, macOS).
+//! Campiona il tempo CPU del processo ogni 120 secondi (Linux, macOS, Windows).
 use chrono::Utc;
+use cpu_time::ProcessTime;
 use std::{fs::OpenOptions, io::Write, time::Duration};
 
-#[cfg(unix)]
+/// Restituisce i secondi di CPU consumati dal processo dall'avvio,
+/// su tutte le piattaforme supportate (Linux, macOS, Windows).
 fn cpu_time_seconds() -> Option<f64> {
-    // CLOCK_PROCESS_CPUTIME_ID: tempo CPU di tutti i thread del processo.
-    unsafe {
-        let mut ts: libc::timespec = std::mem::zeroed();
-        if libc::clock_gettime(libc::CLOCK_PROCESS_CPUTIME_ID, &mut ts) != 0 {
-            return None;
-        }
-        Some(ts.tv_sec as f64 + ts.tv_nsec as f64 / 1_000_000_000.0)
-    }
-}
-#[cfg(not(unix))]
-fn cpu_time_seconds() -> Option<f64> {
-    None
+    Some(ProcessTime::now().as_duration().as_secs_f64())
 }
 
 pub async fn run(log_path: String) {
