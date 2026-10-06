@@ -1,5 +1,7 @@
 /target/
-fleet.db
-server_cpu.log
+/fleet.db
+/fleet.db-shm
+/fleet.db-wal
+/server_cpu.log
 *.log
-Cargo.lock
+.DS_Store

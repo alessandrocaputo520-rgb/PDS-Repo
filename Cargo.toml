@@ -7,3 +7,10 @@ serde      = { version = "1",    features = ["derive"] }
 bincode    = "1"
 chrono     = { version = "0.4",  features = ["serde"] }
 tokio      = { version = "1",    features = ["full"] }
+
+[profile.release]
+# Buon compromesso dimensione/prestazioni; simboli di debug rimossi.
+opt-level = 2
+lto = "thin"
+codegen-units = 1
+strip = "symbols"

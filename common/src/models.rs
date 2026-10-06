@@ -27,8 +27,8 @@ pub struct Position {
 /// Stato della macchina a stati del veicolo.
 ///
 /// La macchina a stati funziona così:
-/// - All'apertura della connessione TCP → `Moving`
-/// - Se le coordinate cambiano → resta `Moving`, reset del timer
+/// - Alla connessione e alla prima coordinata → `Stopped` (baseline)
+/// - Al primo cambiamento di coordinate → `Moving`, reset del timer
 /// - Se le coordinate non cambiano per più di 3 minuti → `Stopped`
 /// - Se la connessione TCP si chiude → `Disconnected`
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -45,8 +45,8 @@ impl std::fmt::Display for VehicleState {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             VehicleState::Disconnected => write!(f, "Sconnesso"),
-            VehicleState::Moving       => write!(f, "In movimento"),
-            VehicleState::Stopped      => write!(f, "Fermo"),
+            VehicleState::Moving => write!(f, "In movimento"),
+            VehicleState::Stopped => write!(f, "Fermo"),
         }
     }
 }

@@ -76,6 +76,12 @@ where
 {
     let encoded = bincode::serialize(msg)
         .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
+    if encoded.len() > 10 * 1024 * 1024 {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidData,
+            "Messaggio troppo grande",
+        ));
+    }
     let len = encoded.len() as u32;
     writer.write_all(&len.to_be_bytes()).await?;
     writer.write_all(&encoded).await?;
@@ -112,6 +118,41 @@ where
 
     let mut buf = vec![0u8; len];
     reader.read_exact(&mut buf).await?;
-    bincode::deserialize(&buf)
-        .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))
+    bincode::deserialize(&buf).map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tokio::io::{duplex, AsyncWriteExt};
+
+    #[tokio::test]
+    async fn framing_round_trip() {
+        let (mut a, mut b) = duplex(1024);
+        send_msg(
+            &mut a,
+            &ClientMessage::SendMessage {
+                content: "test".into(),
+            },
+        )
+        .await
+        .unwrap();
+        let received: ClientMessage = recv_msg(&mut b).await.unwrap();
+        assert!(matches!(received, ClientMessage::SendMessage { content } if content == "test"));
+    }
+
+    #[tokio::test]
+    async fn rejects_giant_frame() {
+        let (mut a, mut b) = duplex(64);
+        a.write_all(&(11_u32 * 1024 * 1024).to_be_bytes())
+            .await
+            .unwrap();
+        assert_eq!(
+            recv_msg::<_, ServerMessage>(&mut b)
+                .await
+                .unwrap_err()
+                .kind(),
+            std::io::ErrorKind::InvalidData
+        );
+    }
 }

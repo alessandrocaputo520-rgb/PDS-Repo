@@ -1,5 +1,5 @@
 [package]
-name    = "client"
+name = "client"
 version = "0.1.0"
 edition = "2021"
 
@@ -9,3 +9,5 @@ path = "src/main.rs"
 
 [dependencies]
 common = { path = "../common" }
+tokio = { workspace = true }
+chrono = { workspace = true }
