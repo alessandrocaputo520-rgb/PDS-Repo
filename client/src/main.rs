@@ -23,7 +23,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         Err(e) => return Err(e.into()),
     }
     let mut emulator = loop {
-        println!("Scegli emulatore: file examples/torino_asti.csv | manual 45.06 7.66 | random 45.06 7.66 | route 45.06 7.66 44.90 8.17 45 3");
+        println!("Inserisci il percorso del file CSV (es. file examples/torino_asti.csv):");
         let Some(line) = input.next_line().await? else {
             return Ok(());
         };
@@ -32,7 +32,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             Err(err) => eprintln!("{err}"),
         }
     };
-    println!("GPS ogni 30s. Comandi: msg TESTO | report day|week|month | pos LAT LON (modo manuale) | quit");
+    println!("GPS ogni 30s. Comandi: msg TESTO | report day|week|month | quit");
     let mut ticks = tokio::time::interval(Duration::from_secs(30));
     ticks.set_missed_tick_behavior(MissedTickBehavior::Skip);
     loop {
@@ -54,18 +54,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 let Some(command) = command? else { break; };
                 let command = command.trim();
                 if command == "quit" || command == "exit" { break; }
-                if let Some(value) = command.strip_prefix("pos ") {
-                    let args: Vec<_> = value.split_whitespace().collect();
-                    if args.len() == 2 {
-                        if let (Ok(lat), Ok(lon)) = (args[0].parse::<f64>(), args[1].parse::<f64>()) {
-                            if let Err(e) = emulator.set_manual(lat, lon) { eprintln!("{e}"); }
-                            else { println!("Coordinate modificate (inviate al prossimo intervallo GPS)"); }
-                            continue;
-                        }
-                    }
-                    eprintln!("Uso: pos LAT LON");
-                    continue;
-                }
                 let content = command.strip_prefix("msg ").unwrap_or(command);
                 if content.is_empty() { continue; }
                 network::send(&writer, &ClientMessage::SendMessage { content: content.to_owned() }).await?;
