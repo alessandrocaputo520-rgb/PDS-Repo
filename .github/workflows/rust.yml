@@ -1,4 +1,4 @@
-name: Rust build and tests (Linux + macOS)
+name: Rust build and tests (Linux + macOS + Windows)
 on:
   push:
   pull_request:
@@ -6,7 +6,7 @@ jobs:
   checks:
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -18,4 +18,9 @@ jobs:
       - run: cargo test --workspace --all-targets
       - run: cargo clippy --workspace --all-targets
       - run: cargo build --release --workspace
-      - run: ls -lh target/release/server target/release/client
+      - name: Dimensione binari (Unix)
+        if: runner.os != 'Windows'
+        run: ls -lh target/release/server target/release/client
+      - name: Dimensione binari (Windows)
+        if: runner.os == 'Windows'
+        run: pwsh scripts/size_report.ps1

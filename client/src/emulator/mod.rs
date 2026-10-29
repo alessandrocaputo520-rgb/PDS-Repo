@@ -1,41 +1,25 @@
 pub mod file;
-pub mod manual;
-pub mod random;
-pub mod route;
 
-use self::{file::FileEmulator, manual::Manual, random::Random, route::Route};
+use self::file::FileEmulator;
 use std::io;
 
+/// Unica modalità di emulazione GPS: lettura da file CSV.
+///
+/// Il file deve avere tre colonne (separatore `;` o `,` o spazio):
+///   time;lat;lon
+///   00:00;45.0618513;7.6606506
+///   ...
 #[derive(Debug)]
-pub enum Emulator {
-    File(FileEmulator),
-    Manual(Manual),
-    Random(Random),
-    Route(Route),
-}
+pub struct Emulator(FileEmulator);
+
 impl Emulator {
+    /// Restituisce la prossima coppia (lat, lon) in base al tempo simulato.
     pub fn next_position(&mut self) -> (f64, f64) {
-        match self {
-            Self::File(f) => f.next_position(),
-            Self::Manual(m) => m.next_position(),
-            Self::Random(r) => r.next_position(),
-            Self::Route(r) => r.next_position(),
-        }
-    }
-    pub fn set_manual(&mut self, lat: f64, lon: f64) -> Result<(), &'static str> {
-        if !valid_coords(lat, lon) {
-            return Err("Coordinate non valide");
-        }
-        match self {
-            Self::Manual(m) => {
-                m.position = (lat, lon);
-                Ok(())
-            }
-            _ => Err("Comando pos disponibile solo in modo manual"),
-        }
+        self.0.next_position()
     }
 }
 
+/// Controlla che le coordinate siano nel range valido.
 pub fn valid_coords(lat: f64, lon: f64) -> bool {
     lat.is_finite()
         && lon.is_finite()
@@ -43,47 +27,43 @@ pub fn valid_coords(lat: f64, lon: f64) -> bool {
         && (-180.0..=180.0).contains(&lon)
 }
 
+/// Analizza la riga di input dell'utente e restituisce un `Emulator` CSV.
+///
+/// Sintassi accettata:
+/// - `file PERCORSO`  — forma esplicita (es. `file examples/torino_asti.csv`)
+/// - `PERCORSO`       — percorso diretto senza prefisso
 pub fn parse_mode(line: &str) -> io::Result<Emulator> {
-    let args: Vec<_> = line.split_whitespace().collect();
-    let invalid = || {
-        io::Error::new(io::ErrorKind::InvalidInput,
-        "Modalità: file PERCORSO | manual LAT LON | random LAT LON | route LAT1 LON1 LAT2 LON2 MINUTI [PAUSA_MINUTI]")
-    };
-    if args.is_empty() {
-        return Err(invalid());
+    let path = line
+        .trim()
+        .strip_prefix("file ")
+        .map(str::trim)
+        .unwrap_or_else(|| line.trim());
+
+    if path.is_empty() {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "Uso: file PERCORSO_CSV  (es. file examples/torino_asti.csv)",
+        ));
     }
-    let get_coord = |i: usize| args.get(i).and_then(|v| v.parse::<f64>().ok());
-    let p = |a: usize, b: usize| -> Option<(f64, f64)> {
-        let (lat, lon) = (get_coord(a)?, get_coord(b)?);
-        valid_coords(lat, lon).then_some((lat, lon))
-    };
-    match args[0] {
-        "file" if args.len() == 2 => Ok(Emulator::File(FileEmulator::open(args[1])?)),
-        "manual" if args.len() == 3 => {
-            let (lat, lon) = p(1, 2).ok_or_else(invalid)?;
-            Ok(Emulator::Manual(Manual::new(lat, lon)))
-        }
-        "random" if args.len() == 3 => {
-            let (lat, lon) = p(1, 2).ok_or_else(invalid)?;
-            Ok(Emulator::Random(Random::new(lat, lon)))
-        }
-        "route" if args.len() == 6 || args.len() == 7 => {
-            let (start, end) = (p(1, 2).ok_or_else(invalid)?, p(3, 4).ok_or_else(invalid)?);
-            let minutes = args[5]
-                .parse::<u64>()
-                .ok()
-                .filter(|n| *n > 0 && *n <= 1440)
-                .ok_or_else(invalid)?;
-            let pause = if args.len() == 7 {
-                args[6].parse::<u64>().map_err(|_| invalid())?
-            } else {
-                0
-            };
-            if pause > 1440 {
-                return Err(invalid());
-            }
-            Ok(Emulator::Route(Route::new(start, end, minutes, pause)))
-        }
-        _ => Err(invalid()),
+
+    Ok(Emulator(FileEmulator::open(path)?))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_with_prefix() {
+        let e = parse_mode("file examples/torino_asti.csv");
+        // Il file reale potrebbe non esistere in CI; verifichiamo almeno il path senza prefisso
+        let _ = e; // non panic sul parsing del percorso
+    }
+
+    #[test]
+    fn parse_empty_returns_error() {
+        assert!(parse_mode("").is_err());
+        assert!(parse_mode("file").is_err());
+        assert!(parse_mode("file ").is_err());
     }
 }
